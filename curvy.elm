@@ -14,7 +14,8 @@ type alias Game =
   }
 
 type alias Player =
-  { x : Float
+  { name : String
+  , x : Float
   , y : Float
   , vel : Float
   , angle : Float
@@ -29,7 +30,8 @@ type alias Keys = { x:Int, y:Int }
 
 player1 : Player
 player1 =
-  { x = 0
+  { name = "Player1" 
+  , x = 0
   , y = 0
   , vel = 4
   , width = 10
@@ -41,7 +43,8 @@ player1 =
 
 player2 : Player
 player2 =
-  { x = 100
+  { name = "Player2" 
+  , x = 100
   , y = 100
   , vel = 4
   , width = 10
