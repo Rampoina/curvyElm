@@ -10,7 +10,7 @@ import Debug
 -- MODEL
 
 type alias Game = 
-  { players: (Player, Player)
+  { players: List Player
   }
 
 type alias Player =
@@ -32,7 +32,7 @@ player1 =
   { x = 0
   , y = 0
   , vel = 4
-  , width = 4
+  , width = 10
   , angle = 0
   , color = Color.blue
   , lastPositions = []
@@ -44,7 +44,7 @@ player2 =
   { x = 100
   , y = 100
   , vel = 4
-  , width = 4
+  , width = 10
   , angle = 0
   , color = Color.red
   , lastPositions = []
@@ -54,33 +54,32 @@ player2 =
 
 game : Game
 game =
-  { players = (player1, player2)
+  { players = [player1, player2]
   }
 
 -- UPDATE
 
 update : (Float, Keys, Keys) -> Game -> Game
 update (dt, keys1, keys2) game =
-    let
-      player1 = fst game.players
-      player2 = snd game.players
-    in
-     {
-        game | 
-         players <-
-             ((player1 |> movePlayer dt keys1 |> physics dt) player2 |> addPosition,
-             (player2 |> movePlayer dt keys2 |> physics dt) player1 |> addPosition
-             )
+     { game |
+         players <- List.map (updatePlayer dt game.players keys1) game.players
     }
+
+updatePlayer : Float -> List Player -> Keys -> Player -> Player
+updatePlayer dt players keys player =
+    let
+        otherPlayers = (List.filter (\p-> p /= player) players)
+    in
+    (player |> movePlayer dt keys |> physics dt) otherPlayers |> addPosition
 
 distance : (Float, Float) -> (Float, Float) -> Float
 distance p1 p2 = sqrt ((((fst p2 - fst p1) ^ 2) + ((snd p2 - snd p1) ^2)) ^ 2)
   
-physics : Float -> Player -> Player -> Player
-physics dt player player2 =
+physics : Float -> Player -> List Player -> Player
+physics dt player otherPlayers =
   let 
     collisionSelf = List.any (\p -> p < 80) (List.map (distance (player.x, player.y)) (List.take ((List.length player.lastPositions) - 20) player.lastPositions))
-    collisionOthers = List.any (\p -> p < 80) (List.map (distance (player.x, player.y)) player2.lastPositions)
+    collisionOthers = List.any (\p -> p < 80) (List.map (distance (player.x, player.y)) (List.foldl (++) [] (List.map (.lastPositions) otherPlayers)))
   in
   
   if (player.alive && ((not collisionSelf) && (not collisionOthers))) then
@@ -110,22 +109,17 @@ movePlayer dt keys player =
 
 view : (Int, Int) -> Game -> Element
 view (w',h') game =
-      let
-        player1 = fst game.players
-        player2 = snd game.players
-        style1 = { defaultLine | width <- 10                          
-                              , cap <- Round
-                              , color <- player1.color
-                }
+    collage w' h' <| List.map drawPlayer game.players
 
-        style2 = { defaultLine | width <- 10                          
+drawPlayer : Player -> Form
+drawPlayer player =
+      let
+        style = { defaultLine | width <- player.width
                               , cap <- Round
-                              , color <- player2.color
+                              , color <- player.color
                 }
-      in 
-        collage w' h' [ traced style1 (path player1.lastPositions),
-                        traced style2 (path player2.lastPositions)
-                    ]
+      in
+        traced style (path player.lastPositions)
 
 -- SIGNALS
 
