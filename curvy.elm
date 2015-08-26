@@ -15,24 +15,26 @@ type alias Game =
 
 type alias Player =
   { name : String
-  , x : Float
-  , y : Float
+  , position : Position
   , vel : Float
   , angle : Float
   , width : Float
   , color: Color
-  , lastPositions : List (Float, Float)
+  , lastPositions : List Position
   , alive : Bool
   }
 
-type alias Keys = { x:Int, y:Int }
+type alias Vector2D = { x: Float, y: Float}
+type alias Position = Vector2D
+type alias Keys = { x: Int, y: Int}
 
 
 player1 : Player
 player1 =
   { name = "Player1" 
-  , x = 0
-  , y = 0
+  , position = { x = 0
+               , y = 0
+               }
   , vel = 4
   , width = 10
   , angle = 0
@@ -44,8 +46,9 @@ player1 =
 player2 : Player
 player2 =
   { name = "Player2" 
-  , x = 100
-  , y = 100
+  , position = { x = 100
+               , y = 100
+               }
   , vel = 4
   , width = 10
   , angle = 0
@@ -75,21 +78,23 @@ updatePlayer dt players keys player =
     in
     (player |> movePlayer dt keys |> physics dt) otherPlayers |> addPosition
 
-distance : (Float, Float) -> (Float, Float) -> Float
-distance p1 p2 = sqrt ((((fst p2 - fst p1) ^ 2) + ((snd p2 - snd p1) ^2)) ^ 2)
+distance : Position -> Position -> Float
+distance p1 p2 = sqrt ((((p2.x - p1.x) ^ 2) + ((p2.y - p1.y) ^2)) ^ 2)
   
 physics : Float -> Player -> List Player -> Player
 physics dt player otherPlayers =
   let 
-    collisionSelf = List.any (\p -> p < 80) (List.map (distance (player.x, player.y)) (List.take ((List.length player.lastPositions) - 20) player.lastPositions))
-    collisionOthers = List.any (\p -> p < 80) (List.map (distance (player.x, player.y)) (List.foldl (++) [] (List.map (.lastPositions) otherPlayers)))
+    collisionSelf = List.any (\p -> p < 80) (List.map (distance player.position) (List.take ((List.length player.lastPositions) - 20) player.lastPositions))
+    collisionOthers = List.any (\p -> p < 80) (List.map (distance player.position) (List.foldl (++) [] (List.map (.lastPositions) otherPlayers)))
   in
   
   if (player.alive && ((not collisionSelf) && (not collisionOthers))) then
       {
         player |
-          x <- player.x + dt * (sin player.angle) * player.vel
-          ,y <- player.y + dt * (cos player.angle) * player.vel
+          position <- {
+                          x = player.position.x + dt * (sin player.angle) * player.vel
+                          ,y = player.position.y + dt * (cos player.angle) * player.vel
+                      }
       }
   else
     player
@@ -98,7 +103,7 @@ physics dt player otherPlayers =
 addPosition : Player -> Player
 addPosition player =
   { player |
-        lastPositions <- player.lastPositions ++ [(player.x, player.y)]
+        lastPositions <- player.lastPositions ++ [player.position]
   }
   
 movePlayer : Float -> Keys -> Player -> Player
@@ -122,7 +127,7 @@ drawPlayer player =
                               , color <- player.color
                 }
       in
-        traced style (path player.lastPositions)
+        traced style (path (List.map (\position -> (position.x, position.y)) player.lastPositions))
 
 -- SIGNALS
 
