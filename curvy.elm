@@ -9,6 +9,10 @@ import Debug
 
 -- MODEL
 
+type alias Game = 
+  { players: (Player, Player)
+  }
+
 type alias Player =
   { x : Float
   , y : Float
@@ -21,6 +25,7 @@ type alias Player =
   }
 
 type alias Keys = { x:Int, y:Int }
+
 
 player1 : Player
 player1 =
@@ -46,13 +51,27 @@ player2 =
   , alive = True
   }
 
+
+game : Game
+game =
+  { players = (player1, player2)
+  }
+
 -- UPDATE
 
-update : (Float, Keys, Keys) -> (Player, Player) -> (Player, Player)
-update (dt, keys1, keys2) (player1, player2) =
-     ((player1 |> movePlayer dt keys1 |> physics dt) player2 |> addPosition,
-      (player2 |> movePlayer dt keys2 |> physics dt) player1 |> addPosition
-     )
+update : (Float, Keys, Keys) -> Game -> Game
+update (dt, keys1, keys2) game =
+    let
+      player1 = fst game.players
+      player2 = snd game.players
+    in
+     {
+        game | 
+         players <-
+             ((player1 |> movePlayer dt keys1 |> physics dt) player2 |> addPosition,
+             (player2 |> movePlayer dt keys2 |> physics dt) player1 |> addPosition
+             )
+    }
 
 distance : (Float, Float) -> (Float, Float) -> Float
 distance p1 p2 = sqrt ((((fst p2 - fst p1) ^ 2) + ((snd p2 - snd p1) ^2)) ^ 2)
@@ -89,9 +108,11 @@ movePlayer dt keys player =
 
 -- VIEW
 
-view : (Int, Int) -> (Player, Player) -> Element
-view (w',h') (player1, player2) =
+view : (Int, Int) -> Game -> Element
+view (w',h') game =
       let
+        player1 = fst game.players
+        player2 = snd game.players
         style1 = { defaultLine | width <- 10                          
                               , cap <- Round
                               , color <- player1.color
@@ -110,7 +131,7 @@ view (w',h') (player1, player2) =
 
 main : Signal Element
 main =
-  Signal.map2 view Window.dimensions (Signal.foldp update (player1, player2) input)
+  Signal.map2 view Window.dimensions (Signal.foldp update game input)
 
 input : Signal (Float, Keys, Keys)
 input =
