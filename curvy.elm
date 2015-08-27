@@ -45,7 +45,8 @@ player1 =
 
 player2 : Player
 player2 =
-  { name = "Player2" 
+  { 
+  name = "Player2" 
   , position = { x = 100
                , y = 100
                }
@@ -79,13 +80,13 @@ updatePlayer dt players keys player =
     (player |> movePlayer dt keys |> physics dt) otherPlayers |> addPosition
 
 distance : Position -> Position -> Float
-distance p1 p2 = sqrt ((((p2.x - p1.x) ^ 2) + ((p2.y - p1.y) ^2)) ^ 2)
-  
+distance p1 p2 = sqrt <| ((p2.x - p1.x) ^ 2) + ((p2.y - p1.y) ^2)
+
 physics : Float -> Player -> List Player -> Player
 physics dt player otherPlayers =
   let 
-    collisionSelf = List.any (\p -> p < 80) (List.map (distance player.position) (List.take ((List.length player.lastPositions) - 20) player.lastPositions))
-    collisionOthers = List.any (\p -> p < 80) (List.map (distance player.position) (List.foldl (++) [] (List.map (.lastPositions) otherPlayers)))
+    collisionSelf = List.any (\p -> p < 8) (List.map (distance player.position) (List.take ((List.length player.lastPositions) - 20) player.lastPositions))
+    collisionOthers = List.any (\p -> p < 8) (List.map (distance player.position) (List.foldl (++) [] (List.map (.lastPositions) otherPlayers)))
   in
   
   if (player.alive && ((not collisionSelf) && (not collisionOthers))) then
