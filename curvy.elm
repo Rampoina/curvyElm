@@ -74,41 +74,47 @@ update (dt, keys1, keys2) game =
 
 updatePlayer : Float -> List Player -> Keys -> Player -> Player
 updatePlayer dt players keys player =
-    let
-        otherPlayers = (List.filter (\p-> p /= player) players)
-    in
-    (player |> movePlayer dt keys |> physics dt) otherPlayers |> addPosition
+    if player.alive then
+        player 
+        |> rotatePlayer dt keys
+        |> movePlayer dt
+        |> addPosition
+        |> handleCollision players
+    else
+        player
 
 distance : Position -> Position -> Float
 distance p1 p2 = sqrt <| ((p2.x - p1.x) ^ 2) + ((p2.y - p1.y) ^2)
 
-physics : Float -> Player -> List Player -> Player
-physics dt player otherPlayers =
-  let 
-    collisionSelf = List.any (\p -> p < 8) (List.map (distance player.position) (List.take ((List.length player.lastPositions) - 20) player.lastPositions))
-    collisionOthers = List.any (\p -> p < 8) (List.map (distance player.position) (List.foldl (++) [] (List.map (.lastPositions) otherPlayers)))
-  in
-  
-  if (player.alive && ((not collisionSelf) && (not collisionOthers))) then
-      {
+movePlayer : Float -> Player -> Player
+movePlayer dt player =
+    {
         player |
-          position <- {
-                          x = player.position.x + dt * (sin player.angle) * player.vel
-                          ,y = player.position.y + dt * (cos player.angle) * player.vel
-                      }
-      }
-  else
-    player
-  
-  
+        position <- {
+            x = player.position.x + dt * (sin player.angle) * player.vel
+            ,y = player.position.y + dt * (cos player.angle) * player.vel
+        }
+    }
+
+handleCollision : List Player -> Player -> Player
+handleCollision players player =
+    let
+        otherPlayers = (List.filter (\p-> p.name /= player.name) players)
+        collisionSelf = List.any (\p -> p < 8) (List.map (distance player.position) (List.take ((List.length player.lastPositions) - 20) player.lastPositions))
+        collisionOthers = List.any (\p -> p < 8) (List.map (distance player.position) (List.foldl (++) [] (List.map (.lastPositions) otherPlayers)))
+    in
+        { player |
+            alive <- not (collisionSelf || collisionOthers)
+        }
+
 addPosition : Player -> Player
 addPosition player =
   { player |
         lastPositions <- player.lastPositions ++ [player.position]
   }
   
-movePlayer : Float -> Keys -> Player -> Player
-movePlayer dt keys player =
+rotatePlayer : Float -> Keys -> Player -> Player
+rotatePlayer dt keys player =
   { player |
       angle <- player.angle  + dt * degrees ((toFloat keys.x) * player.vel)
   }
