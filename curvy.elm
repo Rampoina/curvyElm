@@ -107,8 +107,12 @@ collide player2 player1 =
                        List.take ((List.length player1.lastPositions) - 20) player1.lastPositions
                     else
                         player2.lastPositions
-        distancesToPlayer = List.map (distance player1.position) positions
-        collision = List.any (\distance -> distance < 8) distancesToPlayer
+
+        playerWidths = (player1.width / 2) + (player2.width /2)
+        distanceToPlayer1 = (\position -> (distance player1.position position) - playerWidths)
+        distancesToPlayer1 = List.map distanceToPlayer1 positions
+        treshold = 0.001
+        collision = List.any (\distance -> distance < treshold) distancesToPlayer1
     in
         { player1 |
             alive <- player1.alive && (not collision)
