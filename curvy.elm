@@ -9,8 +9,11 @@ import Debug
 
 -- MODEL
 
-type alias Game = 
-  { players: List Player
+type alias Game =
+  { players : List Player
+    , state : GameState
+    , rounds : Int
+    , currentRound : Int
   }
 
 type alias Player =
@@ -24,7 +27,9 @@ type alias Player =
   , state : PlayerState
   }
 
+type Outcome = Playing | Draw | WonBy (List Player)
 type PlayerState = Alive | KilledBy Player
+type GameState = Elapsing | BetweenRounds Float | GameOver
 type alias Vector2D = { x: Float, y: Float}
 type alias Position = Vector2D
 type alias Keys = { x: Int, y: Int}
@@ -32,7 +37,7 @@ type alias Keys = { x: Int, y: Int}
 
 player1 : Player
 player1 =
-  { name = "Player1" 
+  { name = "Player1"
   , position = { x = 0
                , y = 0
                }
@@ -62,14 +67,65 @@ player2 =
 game : Game
 game =
   { players = [player1, player2]
+    , state = Elapsing
+    , rounds = 10
+    , currentRound = 0
   }
 
 -- UPDATE
 
 update : (Float, Keys, Keys) -> Game -> Game
 update (dt, keys1, keys2) game =
-     { game |
-         players <- List.map (updatePlayer dt game.players keys1) game.players
+    case game.state of
+        Elapsing ->
+            case outcome game.players of
+                Playing ->
+                    { game |
+                        players <- List.map (updatePlayer dt game.players keys1) game.players
+                    }
+                WonBy player ->
+                    { game |
+                        players <- List.map resetPlayer game.players
+                        , state <- BetweenRounds dt
+                        , currentRound <- game.currentRound + 1
+                    }
+                Draw ->
+                    { game |
+                        players <- List.map resetPlayer game.players
+                        , state <- BetweenRounds dt
+                        , currentRound <- game.currentRound + 1
+                    }
+        BetweenRounds t ->
+            if (t < 100) then
+                { game |
+                    state <- BetweenRounds (t+dt)
+                }
+            else
+                { game |
+                    state <- Elapsing
+                }
+        GameOver ->
+            game
+
+outcome : List Player -> Outcome
+outcome players =
+    let
+        alivePlayers = List.filter (\player -> player.state == Alive) players
+        numberAlivePlayers = List.length alivePlayers
+    in
+       case numberAlivePlayers of
+           0 -> Draw
+           1 -> WonBy alivePlayers
+           _ -> Playing
+
+resetPlayer : Player -> Player
+resetPlayer player =
+    { player |
+        position <- {x = 100
+                    ,y = 100
+                    }
+        , lastPositions <- []
+        , state <- Alive
     }
 
 updatePlayer : Float -> List Player -> Keys -> Player -> Player
