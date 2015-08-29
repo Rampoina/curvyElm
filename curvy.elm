@@ -98,13 +98,20 @@ movePlayer dt player =
 
 handleCollision : List Player -> Player -> Player
 handleCollision players player =
+    List.foldl collide player players
+
+collide : Player -> Player -> Player
+collide player2 player1 =
     let
-        otherPlayers = (List.filter (\p-> p.name /= player.name) players)
-        collisionSelf = List.any (\p -> p < 8) (List.map (distance player.position) (List.take ((List.length player.lastPositions) - 20) player.lastPositions))
-        collisionOthers = List.any (\p -> p < 8) (List.map (distance player.position) (List.foldl (++) [] (List.map (.lastPositions) otherPlayers)))
+        positions = if player1.name == player2.name then
+                       List.take ((List.length player1.lastPositions) - 20) player1.lastPositions
+                    else
+                        player2.lastPositions
+        distancesToPlayer = List.map (distance player1.position) positions
+        collision = List.any (\distance -> distance < 8) distancesToPlayer
     in
-        { player |
-            alive <- not (collisionSelf || collisionOthers)
+        { player1 |
+            alive <- player1.alive && (not collision)
         }
 
 addPosition : Player -> Player
