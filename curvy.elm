@@ -21,9 +21,10 @@ type alias Player =
   , width : Float
   , color: Color
   , lastPositions : List Position
-  , alive : Bool
+  , state : PlayerState
   }
 
+type PlayerState = Alive | KilledBy Player
 type alias Vector2D = { x: Float, y: Float}
 type alias Position = Vector2D
 type alias Keys = { x: Int, y: Int}
@@ -40,13 +41,12 @@ player1 =
   , angle = 0
   , color = Color.blue
   , lastPositions = []
-  , alive = True
+  , state = Alive
   }
 
 player2 : Player
 player2 =
-  { 
-  name = "Player2" 
+  { name = "Player2"
   , position = { x = 100
                , y = 100
                }
@@ -55,7 +55,7 @@ player2 =
   , angle = 0
   , color = Color.red
   , lastPositions = []
-  , alive = True
+  , state = Alive
   }
 
 
@@ -74,14 +74,14 @@ update (dt, keys1, keys2) game =
 
 updatePlayer : Float -> List Player -> Keys -> Player -> Player
 updatePlayer dt players keys player =
-    if player.alive then
-        player 
-        |> rotatePlayer dt keys
-        |> movePlayer dt
-        |> addPosition
-        |> handleCollision players
-    else
-        player
+    case player.state of
+        Alive ->
+            player
+            |> rotatePlayer dt keys
+            |> movePlayer dt
+            |> addPosition
+            |> handleCollision players
+        _ -> player
 
 distance : Position -> Position -> Float
 distance p1 p2 = sqrt <| ((p2.x - p1.x) ^ 2) + ((p2.y - p1.y) ^2)
@@ -115,7 +115,7 @@ collide player2 player1 =
         collision = List.any (\distance -> distance < treshold) distancesToPlayer1
     in
         { player1 |
-            alive <- player1.alive && (not collision)
+            state <- if collision then KilledBy player2 else player1.state
         }
 
 addPosition : Player -> Player
