@@ -28,8 +28,8 @@ type alias Player =
   }
 
 type Outcome = Playing | Draw | WonBy (List Player)
-type PlayerState = Alive | KilledBy Player
-type GameState = Elapsing | BetweenRounds Float | GameOver
+type PlayerState = Alive | KilledBy Player | Waiting
+type GameState = WaitingRound Float | PlayingRound | RoundOver Float Outcome | GameOver
 type alias Vector2D = { x: Float, y: Float}
 type alias Position = Vector2D
 type alias Keys = { x: Int, y: Int}
@@ -46,7 +46,7 @@ player1 =
   , angle = 0
   , color = Color.blue
   , lastPositions = []
-  , state = Alive
+  , state = Waiting
   }
 
 player2 : Player
@@ -60,14 +60,14 @@ player2 =
   , angle = 0
   , color = Color.red
   , lastPositions = []
-  , state = Alive
+  , state = Waiting
   }
 
 
 game : Game
 game =
   { players = [player1, player2]
-    , state = Elapsing
+    , state = WaitingRound 0.0
     , rounds = 10
     , currentRound = 0
   }
@@ -77,7 +77,7 @@ game =
 update : (Float, Keys, Keys) -> Game -> Game
 update (dt, keys1, keys2) game =
     case game.state of
-        Elapsing ->
+        PlayingRound ->
             case outcome game.players of
                 Playing ->
                     { game |
@@ -86,23 +86,36 @@ update (dt, keys1, keys2) game =
                 WonBy player ->
                     { game |
                         players <- List.map resetPlayer game.players
-                        , state <- BetweenRounds dt
+                        , state <- RoundOver dt (WonBy player)
                         , currentRound <- game.currentRound + 1
                     }
                 Draw ->
                     { game |
                         players <- List.map resetPlayer game.players
-                        , state <- BetweenRounds dt
+                        , state <- RoundOver dt Draw
                         , currentRound <- game.currentRound + 1
                     }
-        BetweenRounds t ->
+        WaitingRound t ->
             if (t < 100) then
                 { game |
-                    state <- BetweenRounds (t+dt)
+                    players <- List.map (updatePlayer dt game.players keys1) game.players
+                    , state <- WaitingRound (t+dt)
                 }
             else
                 { game |
-                    state <- Elapsing
+                    players <- List.map readyPlayer game.players
+                    , state <- PlayingRound
+                }
+        RoundOver t s ->
+            if (t < 100) then
+                { game |
+                    players <- List.map (updatePlayer dt game.players keys1) game.players
+                    , state <- RoundOver (t+dt) s
+                }
+            else
+                { game |
+                    players <- List.map readyPlayer game.players
+                    , state <- WaitingRound dt
                 }
         GameOver ->
             game
@@ -118,6 +131,12 @@ outcome players =
            1 -> WonBy alivePlayers
            _ -> Playing
 
+readyPlayer : Player -> Player
+readyPlayer player =
+    { player |
+        state <- Alive
+    }
+
 resetPlayer : Player -> Player
 resetPlayer player =
     { player |
@@ -125,7 +144,7 @@ resetPlayer player =
                     ,y = 100
                     }
         , lastPositions <- []
-        , state <- Alive
+        , state <- Waiting
     }
 
 updatePlayer : Float -> List Player -> Keys -> Player -> Player
@@ -137,6 +156,10 @@ updatePlayer dt players keys player =
             |> movePlayer dt
             |> addPosition
             |> handleCollision players
+        Waiting ->
+            player
+            |> rotatePlayer dt keys
+            |> movePlayer dt
         _ -> player
 
 distance : Position -> Position -> Float
@@ -196,12 +219,21 @@ view (w',h') game =
 drawPlayer : Player -> Form
 drawPlayer player =
       let
-        style = { defaultLine | width <- player.width
-                              , cap <- Round
-                              , color <- player.color
+        positionToTuple = (\position -> (position.x, position.y))
+        lineStyle = { defaultLine |
+                    width <- player.width
+                    , color <- player.color
+                    , cap <- Round
                 }
       in
-        traced style (path (List.map (\position -> (position.x, position.y)) player.lastPositions))
+         if List.isEmpty player.lastPositions then 
+            circle (player.width / 2)
+            |> filled player.color
+            |> move (positionToTuple player.position)
+         else
+            List.map positionToTuple player.lastPositions
+            |> path
+            |> traced lineStyle
 
 -- SIGNALS
 
