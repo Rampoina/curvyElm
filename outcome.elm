@@ -16,3 +16,11 @@ outcome players =
            0 -> Draw
            1 -> WonBy (withDefault defaultPlayer (List.head alivePlayers))
            _ -> Playing
+
+
+outcomeToString : Outcome -> String
+outcomeToString outcome =
+    case outcome of
+        Draw -> "Draw"
+        Playing -> "Playing"
+        WonBy player -> player.name ++ " wins"
