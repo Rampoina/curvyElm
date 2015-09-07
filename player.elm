@@ -9,9 +9,11 @@ type alias Player =
   , vel : Float
   , angle : Float
   , width : Float
-  , color: Color
+  , color : Color
   , lastPositions : List Position
   , state : PlayerState
+  , totalScore : Int
+  , roundScore : Int
   }
 
 type PlayerState = Alive | KilledBy Player | Waiting
@@ -56,7 +58,7 @@ movePlayer dt player =
 addPosition : Player -> Player
 addPosition player =
   { player |
-        lastPositions <- player.lastPositions ++ [player.position]
+        lastPositions <- player.position :: player.lastPositions 
   }
 
 handleCollision : List Player -> Player -> Player
@@ -67,11 +69,11 @@ collide : Player -> Player -> Player
 collide player2 player1 =
     let
         positions = if player1.name == player2.name then
-                       List.take ((List.length player1.lastPositions) - 20) player1.lastPositions
+                       List.drop 20 player1.lastPositions
                     else
                         player2.lastPositions
 
-        playerWidths = (player1.width / 2) + (player2.width /2)
+        playerWidths = (player1.width + player2.width) / 2
         distanceToPlayer1 = (\position -> (distance player1.position position) - playerWidths)
         distancesToPlayer1 = List.map distanceToPlayer1 positions
         treshold = 0.001
@@ -90,26 +92,44 @@ readyPlayer player =
 resetPlayer : Player -> Player
 resetPlayer player =
     { player |
-        position <- {x = 100
-                    ,y = 100
+        position <- { x = 100
+                    , y = 100
                     }
         , lastPositions <- []
         , state <- Waiting
     }
 
-initPlayer : Player
+calculateScores : List Player -> List Player
+calculateScores players =
+    List.map (calculateScore players) players
 
+calculateScore : List Player -> Player -> Player
+calculateScore players player =
+    { player |
+        roundScore <- List.length <| List.filter (killedBy player) players
+        totalScore <- List.length <| List.filter (killedBy player) players
+    }
+
+killedBy : Player -> Player -> Bool
+killedBy player2 player1 =
+    case player1.state of
+        KilledBy p -> p.name == player2.name
+        _ -> False
+
+initPlayer : Player
 initPlayer = 
   { name = "defaultPlayer"
   , position = { x = 0
                , y = 0
                }
-  , vel = 0
-  , width = 0
+  , vel = 4
+  , width = 10
   , angle = 0
   , color = Color.black
   , lastPositions = []
   , state = Waiting
+  , roundScore = 0
+  , totalScore = 0
   }
 
 

@@ -24,32 +24,21 @@ type alias Keys = { x: Int, y: Int}
 
 
 player1 : Player
-player1 =
-  { name = "Player1"
-  , position = { x = 0
-               , y = 0
-               }
-  , vel = 4
-  , width = 10
-  , angle = 0
-  , color = Color.blue
-  , lastPositions = []
-  , state = Waiting
-  }
+player1 = 
+    { initPlayer |
+        name <- "Player1"
+        , color <- Color.blue
+    }
 
 player2 : Player
-player2 =
-  { name = "Player2"
-  , position = { x = 100
-               , y = 100
-               }
-  , vel = 4
-  , width = 10
-  , angle = 0
-  , color = Color.red
-  , lastPositions = []
-  , state = Waiting
-  }
+player2 = 
+    { initPlayer |
+        name <- "Player2"
+        , position <- { x = 100
+                      , y = 100
+                      }
+        , color <- Color.red
+    }
 
 game : Game
 game =
@@ -106,6 +95,7 @@ updatePlayers :  Float -> Keys -> Game -> Game
 updatePlayers dt keys game =
     { game |
         players <- List.map (updatePlayer dt game.players keys) game.players
+                   |> calculateScores
     }
 
 resetPlayers : Game -> Game
